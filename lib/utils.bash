@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for exercism.
 GH_REPO="https://github.com/exercism/cli/"
 TOOL_NAME="exercism"
 TOOL_TEST="exercism --version"
@@ -31,18 +30,24 @@ list_github_tags() {
 }
 
 list_all_versions() {
-  # TODO: Adapt this. By default we simply list the tag names from GitHub releases.
   # Change this function if exercism has other means of determining installable versions.
   list_github_tags
 }
 
 download_release() {
-  local version filename url
+  local version filename url os_type
   version="$1"
   filename="$2"
 
-  # TODO: Adapt the release URL convention for exercism
-  url="$GH_REPO/archive/v${version}.tar.gz"
+  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    os_type="linux"
+  elif [[ "$OSTYPE" == "darwin"* ]]; then
+    os_type="darwin"
+  else
+    fail "Unsupported OS. Only x64 Linux and OSX supperted. Other version can be downloaded manually"
+  fi
+
+  url="$GH_REPO/releases/download/v${version}/exercism-${version}-${os_type}-x86_64.tar.gz"
 
   echo "* Downloading $TOOL_NAME release $version..."
   curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
@@ -59,11 +64,12 @@ install_version() {
 
   (
     mkdir -p "$install_path"
+    mkdir -p "$install_path/bin"
     cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
 
-    # TODO: Asert exercism executable exists.
     local tool_cmd
     tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
+    ln -s "$install_path/exercism" "$install_path/bin/exercism"
     test -x "$install_path/bin/$tool_cmd" || fail "Expected $install_path/bin/$tool_cmd to be executable."
 
     echo "$TOOL_NAME $version installation was successful!"
